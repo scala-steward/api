@@ -120,7 +120,26 @@ resource "helm_release" "kibana" {
   ]
 }
 
+# Application credentials for elasticsearch
+resource "random_password" "language_service_elasticsearch_password" {
+  length      = 32
+  special     = false
+  min_numeric = 10
+}
+
+resource "kubernetes_secret" "language_service_elastic_credentials" {
+  metadata {
+    name = "language-service-elastic-credentials"
+  }
+
+  data = {
+    username = "languageservice"
+    password = random_password.language_service_elasticsearch_password.result
+  }
+}
+
 # Logging configuration
+# Every node has a log collection agent that posts logs to elasticsearch
 
 resource "kubernetes_namespace" "logging" {
   metadata {
@@ -154,5 +173,31 @@ resource "helm_release" "fluentd_elasticsearch" {
 
   depends_on = [
     kubernetes_namespace.logging
+  ]
+}
+
+# Content jobs runtime
+# Content requires long running jobs that could be split into parallel
+# This is a good use case for spark.
+
+resource "kubernetes_namespace" "content" {
+  metadata {
+    annotations = {
+      name = "content"
+    }
+
+    name = "content"
+  }
+}
+
+resource "helm_release" "spark" {
+  name       = "spark"
+  repository = "https://charts.bitnami.com/bitnami"
+  chart      = "spark"
+  version    = "1.2.10"
+  namespace  = "content"
+
+  depends_on = [
+    kubernetes_namespace.content
   ]
 }
