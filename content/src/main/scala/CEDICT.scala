@@ -5,7 +5,11 @@ case class CEDICTDefinition(subdefinitions: Array[String], simplified: String, t
 
 object CEDICT {
   def main(args: Array[String]) {
-    val spark = SparkSession.builder.appName("CEDICT").getOrCreate()
+    val spark = SparkSession.builder
+      .appName("CEDICT")
+      .config("es.net.http.auth.user", "user")
+      .config("es.net.http.auth.pass", "pass")
+      .getOrCreate()
 
     // Allows creating a row from a case class
     import spark.implicits._
